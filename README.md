@@ -7,6 +7,21 @@
 <a href="https://packagist.org/packages/laravel/framework"><img src="https://poser.pugx.org/laravel/framework/license.svg" alt="License"></a>
 </p>
 
+### Run API Laravel 
+
+```bash
+$ composer install
+$ npm install
+$ php artisan key:generate
+$ php artisan storage:link
+$ php artisan optimize:clear
+$ php artisan optimize
+$ php artisan migrate:fresh  --seed
+$ php artisan db:seed --class=AdminsSeeder
+$ php artisan db:seed --class=CategoriesSeeder
+$ php artisan db:seed --class=DepartmentsSeeder
+```
+
 ## About Laravel
 
 Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
