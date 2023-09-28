@@ -10,7 +10,8 @@ class Article extends Model
     use HasFactory;
     protected $fillable = [
         'id',
-        'id_doctor',
+        'id_user',
+        'id_category',
         'title',
         'content',
         'thumbnail',
@@ -22,9 +23,13 @@ class Article extends Model
         return $this->belongsTo(InforDoctor::class);
     }
 
-    public function articleCategories()
+    public function inforHospital() {
+        return $this->belongsTo(InforHospital::class);
+    }
+
+    public function category()
     {
-        return $this->hasMany(ArticleCategory::class);
+        return $this->belongsTo(Category::class);
     }
 
 }
