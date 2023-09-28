@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\AdminController;
+use App\Http\Controllers\ArticleController;
 use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\DepartmentController;
 use App\Http\Controllers\InforDoctorController;
@@ -103,13 +104,24 @@ Route::prefix('category')->controller(CategoryController::class)->group(function
 });
 
 // Article 
-Route::prefix('article')->controller(CategoryController::class)->group(function () {
-    Route::middleware(['auth:admin_api,user_api','role:doctor'])->group(function () {
+Route::prefix('article')->controller(ArticleController::class)->group(function () {
+    Route::middleware(['auth:admin_api,user_api','role:admin,superadmin,manager,doctor,hospital'])->group(function () {
         Route::post('/add', 'add');
         Route::post('update/{id}', 'edit');
-        Route::delete('/{id}', 'delete');
     });
+
+    Route::middleware(['auth:user_api','role:doctor,hospital'])->group(function () {
+        Route::delete('delete/{id}', 'delete');
+    });
+
+    Route::middleware('auth:admin_api')->group(function () {
+        Route::post('hide-show/{id}', 'hideShow');
+        Route::post('change-accept/{id}', 'changeAccept');
+    });
+
     Route::get('/', 'all');
+    Route::get('/user/{id}', 'articleOfDoctor');
+    Route::get('/admin', 'articleOfAdmin');
     Route::get('/detail/{id}', 'details');
 });
 
