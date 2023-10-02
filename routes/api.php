@@ -162,7 +162,14 @@ Route::prefix('hospital-service')->controller(HospitalServiceController::class)-
     });
 });
 
-// Value 
+
+
+
+
+
+
+
+// Seeder Value 
 Route::get('province', [ProvinceController::class, 'all']);
 
 
