@@ -3,6 +3,8 @@
 namespace App\Repositories;
 
 use App\Models\Admin;
+use Illuminate\Support\Facades\DB;
+use Throwable;
 
 class AdminRepository extends BaseRepository implements AdminInterface
 {
@@ -11,112 +13,52 @@ class AdminRepository extends BaseRepository implements AdminInterface
         return Admin::class;
     }
 
-    /**
-     * getAllAdmin
-     *
-     * @return array
-     */
-    public function getAllAdmin()
+    public function getAdmin()
     {
         return $this->model;
     }
 
-    /**
-     * addAdmin
-     *
-     * @param $admin
-     */
-    public function addAdmin($admin)
+    public static function findAdminByEmail($email)
     {
-        return $this->model->create([
-            'name' => $admin->name,
-            'email' => $admin->email,
-            'role' => 0,
-            'avatar' => 'storage/Blog/image/avatars/admin.png',
-            'password' => $admin->password,
-        ]);
+        return (new self)->model->where('email', $email)->first();
     }
 
-    /**
-     * changeRole
-     *
-     * @param object $filter
-     */
-    public function changeRole($input)
-    {
-        $admin = $this->model->find($input->id);
-        $updateData = [
-            'role' => $input->role,
-        ];
-        $admin->update($updateData);
-    }
-
-    public function getAdminById($id)
-    {
-        return $this->model
-            ->when($id, fn ($q) => $q->where('id', '=', $id))
-            ->first();
-    }
-
-    public function ajaxSearchInforAdmin($search, $role)
-    {
-        return $this->model->where(function ($query) use ($search) {
-            $query->where('name', 'like', '%' . $search . '%')
-                ->orWhere('email', 'like', '%' . $search . '%');
-        })
-            ->where('role', 'like', '%' . $role . '%');
-    }
-
-    /**
-     * findUserById
-     *
-     * @param int $id
-     * @return object
-     */
     public function findAdminById($id)
     {
         return $this->model->find($id);
     }
 
-    /**
-     * updateInfor
-     *
-     * @param object $user
-     * @param object $filter
-     */
-    public function updateInfor($admin, $filter)
+    public function findAdminByTokenVerifyEmail($token)
     {
-        $admin = $this->model->find($admin->id);
-        $updateData = [
-            'name' => $filter->name,
-            'avatar' => $filter->avatar ?? $admin->avatar,
-        ];
-        $admin->update($updateData);
+        return $this->model->where('token_verify_email', $token)->first();
     }
 
-    /**
-     * updatePassword
-     *
-     * @param object $admin
-     * @param srting $password
-     */
-    public function updatePassword($admin, $password)
+    public function createAdmin($data)
     {
-        $user = $this->model->find($admin->id);
-        $updateData = ['password' => $password];
-        $user->update($updateData);
+        DB::beginTransaction();
+        try {
+            $newAdmin = $this->model->create($data);
+            DB::commit();
+
+            return $newAdmin;
+        } catch (Throwable $e) {
+            DB::rollback();
+            throw $e;
+        }
     }
 
-    /**
-     * findAdminbyEmail
-     *
-     * @param string $email
-     * @return object
-     */
-    public function findAdminbyEmail($email)
+    public static function updateAdmin($id, $data)
     {
-        return $this->model
-            ->when($email, fn ($q) => $q->where('email', '=', $email))
-            ->first();
+        DB::beginTransaction();
+        try {
+            $admin = (new self)->model->find($id);
+            $admin->update($data);
+            DB::commit();
+
+            return $admin;
+        } catch (Throwable $e) {
+            DB::rollback();
+            throw $e;
+        }
     }
 }
