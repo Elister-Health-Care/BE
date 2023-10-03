@@ -21,6 +21,7 @@ $ php artisan db:seed --class=AdminsSeeder
 $ php artisan db:seed --class=CategoriesSeeder
 $ php artisan db:seed --class=DepartmentsSeeder
 $ php artisan db:seed --class=ProvincesSeeder
+$ php artisan queue:work 
 ```
 
 ## About Laravel
