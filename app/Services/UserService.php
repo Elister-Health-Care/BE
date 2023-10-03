@@ -3,22 +3,25 @@
 namespace App\Services;
 
 use App\Enums\UserEnum;
+use App\Http\Requests\RequestChangePassword;
+use App\Http\Requests\RequestCreatePassword;
 use App\Jobs\SendForgotPasswordEmail;
-use App\Jobs\SendMailWelCome;
-use App\Mail\ForgotPassword;
-use App\Mail\NotifyMail;
+use App\Models\Admin;
+use App\Models\User;
+use App\Repositories\AdminRepository;
+use App\Repositories\InforDoctorRepository;
+use App\Repositories\InforHospitalRepository;
+use App\Repositories\InforUserRepository;
 use App\Repositories\PasswordResetRepository;
 use App\Repositories\UserInterface;
+use App\Repositories\UserRepository;
 use Brian2694\Toastr\Facades\Toastr;
-use Exception;
-use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\File;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Queue;
-use Illuminate\Support\Facades\Session;
 use Illuminate\Support\Str;
+use Throwable;
 
 class UserService
 {
@@ -30,391 +33,195 @@ class UserService
         $this->userRepository = $userRepository;
     }
 
-    /**
-     * userLogin
-     *
-     * @param object $filter
-     */
-    public function userLogin(object $filter)
+    public function refresh()
+    {
+        return $this->respondWithToken(auth('user_api')->refresh());
+    }
+
+    protected function respondWithToken($token)
+    {
+        return response()->json([
+            'access_token' => $token,
+            'token_type' => 'bearer',
+            'expires_in' => auth()->guard('user_api')->factory()->getTTL() * 60,
+        ]);
+    }
+
+    public function login(Request $request)
     {
         try {
-            if (strpos($filter->email, '@') !== false) {
-                $credentials = [
-                    'email' => $filter->email,
-                    'password' => $filter->password,
-                ];
-                if (Auth::guard('user')->attempt($credentials)) {
-                    if (Auth::guard('user')->user()->status == 0) {
-                        Toastr::error('Your account has been locked or not approved !');
-                        Auth::guard('user')->logout();
-
-                        return redirect()->back()->withInput();
-                    } else {
-                        Toastr::success('Login successful !');
-
-                        return redirect()->route('infor.view_infor');
-                    }
-                }
-                Toastr::error('Login details are not valid !');
-
-                return redirect()->back()->withInput();
+            $user = $this->userRepository->findUserByEmail($request->email);
+            if (empty($user)) {
+                return response()->json(['message' => 'Email không tồn tại !'], 400);
             } else {
-                $user = $this->userRepository->getUser($filter->email);
-                if ($user && (Hash::check($filter->password, $user->password))) {
-                    if ($user->status == 0) {
-                        Toastr::error('Your account has been locked or not approved !');
-
-                        return redirect()->back()->withInput();
-                    } else {
-                        Auth::guard('user')->login($user);
-                        Toastr::success('Login successful !');
-
-                        return redirect()->route('infor.view_infor');
-                    }
-                } else {
-                    Toastr::error('Login details are not valid !');
-
-                    return redirect()->back()->withInput();
+                $is_accept = $user->is_accept;
+                if ($is_accept == 0) {
+                    return response()->json(['message' => 'Tài khoản của bạn đã bị khóa hoặc chưa được phê duyệt !'], 400);
+                }
+                if ($user->email_verified_at == null) {
+                    return response()->json(['message' => 'Email này chưa được xác nhận , hãy kiểm tra và xác nhận nó trước khi đăng nhập !'], 400);
                 }
             }
-        } catch (\Exception $e) {
+
+            $credentials = request(['email', 'password']);
+            if (!$token = auth()->guard('user_api')->attempt($credentials)) {
+                return response()->json(['message' => 'Email hoặc mật khẩu không chính xác !'], 400);
+            }
+
+            $user->have_password = true;
+            if (!$user->password) {
+                $user->have_password = false;
+            } // login by gg chưa có password
+
+            $filter = (object) [
+                'id_user' => $user->id ?? '',
+                'id_doctor' => $user->id ?? '',
+                'id_hospital' => $user->id ?? '',
+            ];
+            $inforUser = InforUserRepository::getInforUser($filter)->first();
+            if ($user->role == 'hospital') {
+                $inforUser = InforHospitalRepository::getInforHospital($filter)->first();
+                $inforUser->infrastructure = json_decode($inforUser->infrastructure);
+                $inforUser->location = json_decode($inforUser->location);
+            }
+            if ($user->role == 'doctor') {
+                $inforUser = InforDoctorRepository::getInforDoctor($filter)->first();
+            }
+
+            return response()->json([
+                'user' => array_merge($user->toArray(), $inforUser->toArray()),
+                'message' => $this->respondWithToken($token),
+            ]);
+        } catch (Throwable $e) {
+            return response()->json(['message' => $e->getMessage()], 400);
         }
     }
 
-    /**
-     * saveAvatar
-     *
-     * @param object $filter
-     * @return string
-     */
-    public function saveAvatar(object $filter)
+    public function changePassword(RequestChangePassword $request)
     {
         try {
-            if ($filter->image) {
-                $image = $filter->image;
-                $filename = pathinfo($image->getClientOriginalName(), PATHINFO_FILENAME) . '_' . time() . '.' . $image->getClientOriginalExtension();
-                $image->storeAs(UserEnum::PATH_FILE_SAVE, $filename);
-
-                return UserEnum::PATH_FILE_DB . $filename;
+            $user = UserRepository::findUserById(auth('user_api')->user()->id);
+            if (!(Hash::check($request->get('current_password'), $user->password))) {
+                return response()->json([
+                    'message' => 'Mật khẩu không chính xác !',
+                ], 400);
             }
-        } catch (\Exception $e) {
+            $data = ['password' => Hash::make($request->get('new_password'))];
+            $user = UserRepository::updateUser($user->id, $data);
+
+            return response()->json([
+                'message' => 'Thay đổi mật khẩu thành công !',
+            ], 200);
+        } catch (Throwable $e) {
+            return response()->json(['message' => $e->getMessage()], 400);
         }
     }
 
-    /**
-     * sendMail
-     *
-     * @param object $user
-     * @return response
-     */
-    public function sendMail($user)
+    public function forgotSend(Request $request)
     {
         try {
-            // Mail::to($user->email)->send(new NotifyMail($user->name));
-            Log::info("Add jobs to Queue , Email: $user->email with URL: $user->name");
-            // for($i=0; $i<1000; $i++) {
-            //     Queue::push(new SendMailWelCome($user->email, $user->name));
-            // }
-            Queue::push(new SendMailWelCome($user->email, $user->name));
-            Toastr::success('Send Mail Success !');
-        } catch (\Exception $e) {
-            Toastr::error('Send Mail Error !');
-        }
-
-        return response();
-    }
-
-    /**
-     * userRegister
-     *
-     * @param object $filter
-     */
-    public function userRegister(object $filter)
-    {
-        try {
-            if (strpos($filter->username, '@') !== false) {
-                Toastr::error('Username cannot contain the @ character !');
-
-                return redirect()->back()->withInput();
-            }
-            $user = $this->userRepository->getUserByUsername($filter);
-            if ($user) {
-                Toastr::error('Username already exists !');
-
-                return redirect()->back()->withInput();
-            }
-            $userEmail = $this->userRepository->findUserbyEmail($filter->email);
-            if ($userEmail) {
-                if ($userEmail['password']) {
-                    Toastr::error('Account already exists !');
-
-                    return redirect()->back()->withInput();
-                } else {
-                    $filter->avatar = $this->saveAvatar($filter);
-                    $this->userRepository->updateUser($userEmail, $filter);
-                }
-            } else {
-                $filter->avatar = $this->saveAvatar($filter);
-                $user = $this->userRepository->createUser($filter);
-                Toastr::success('Register successful !');
-                $this->sendMail($user);
-            }
-
-            return redirect()->back();
-        } catch (\Exception $e) {
-        }
-    }
-
-    /**
-     * handleGithubCallback
-     *
-     * @param object $user
-     */
-    public function handleGithubCallback($user)
-    {
-        try {
-            $finduser = $this->userRepository->findUserByGithubId($user->id);
-            if ($finduser) {
-                Auth::guard('user')->login($finduser);
-
-                if (Auth::guard('user')->user()->status == 0) {
-                    Toastr::error('Your account has been locked or not approved !');
-
-                    Auth::guard('user')->logout();
-
-                    return redirect()->route('login');
-                }
-
-                return redirect()->route('infor.view_infor');
-            } else {
-                $findEmail = $this->userRepository->findUserbyEmail($user->email);
-                if ($findEmail) {
-                    $this->userRepository->updateIdGithub($findEmail, $user->id);
-                    Auth::guard('user')->login($findEmail);
-                    Toastr::success('Login successful !');
-                } else {
-                    $newUser = $this->userRepository->createUserGithub($user);
-                    Auth::guard('user')->login($newUser);
-                    Toastr::success('Register successful !');
-                    $this->sendMail($newUser);
-                }
-
-                return redirect()->route('infor.view_infor');
-            }
-        } catch (\Exception $e) {
-        }
-    }
-
-    /**
-     * handleGoogleCallback
-     *
-     * @param object $user
-     */
-    public function handleGoogleCallback($user)
-    {
-        try {
-            $finduser = $this->userRepository->findUserByGoogleId($user->id);
-            if ($finduser) {
-                Auth::guard('user')->login($finduser);
-
-                if (Auth::guard('user')->user()->status == 0) {
-                    Toastr::error('Your account has been locked or not approved !');
-
-                    Auth::guard('user')->logout();
-
-                    return redirect()->route('login');
-                }
-
-                return redirect()->route('infor.view_infor');
-            } else {
-                $findEmail = $this->userRepository->findUserbyEmail($user->email);
-                if ($findEmail) {
-                    $this->userRepository->updateIdGoogle($findEmail, $user->id);
-                    Auth::guard('user')->login($findEmail);
-                    Toastr::success('Login successful !');
-                } else {
-                    $newUser = $this->userRepository->createUserGoogle($user);
-                    Auth::guard('user')->login($newUser);
-                    Toastr::success('Register successful !');
-                    $this->sendMail($newUser);
-                }
-
-                return redirect()->route('infor.view_infor');
-            }
-        } catch (\Exception $e) {
-        }
-    }
-
-    /**
-     * forgotSend
-     *
-     * @param string $email
-     */
-    public function forgotSend($email)
-    {
-        try {
+            $email = $request->email;
             $token = Str::random(32);
-            $is_user = 1;
-            $user = PasswordResetRepository::findPasswordReset($email, $is_user);
+            $isUser = 1;
+            $user = PasswordResetRepository::findPasswordReset($email, $isUser);
             if ($user) {
-                PasswordResetRepository::updateToken($user, $token);
+                $data = ['token' => $token];
+                $user = UserRepository::updateUser($user->id, $data);
             } else {
-                PasswordResetRepository::createToken($email, $token, $is_user);
+                PasswordResetRepository::createToken($email, $isUser, $token);
             }
-            Toastr::success('Send Mail Password Reset Success !');
-            $url = 'http://localhost:8000/forgot-form?token=' . $token;
-            // Mail::to($email)->send(new ForgotPassword($url));
-            // SendForgotPasswordEmail::dispatch($email, $url);
+            $url = UserEnum::DOMAIN_PATH . 'forgot-form?token=' . $token;
             Log::info("Add jobs to Queue , Email: $email with URL: $url");
             Queue::push(new SendForgotPasswordEmail($email, $url));
 
-            return redirect()->back();
-        } catch (\Exception $e) {
+            return response()->json([
+                'message' => 'Gửi mail đặt lại mật khẩu thành công !',
+            ], 200);
+        } catch (Throwable $e) {
+            return response()->json(['message' => $e->getMessage()], 400);
         }
     }
 
-    /**
-     * forgotUpdate
-     *
-     * @param object $filter
-     */
-    public function forgotUpdate($filter)
+    public function forgotUpdate(RequestCreatePassword $request)
     {
         try {
-            $is_user = 1;
-            $new_password = Hash::make($filter->new_password);
-            $userReset = PasswordResetRepository::findPasswordResetByToken($filter->token);
-            if ($userReset) {
-                if ($filter->new_password != $filter->confim_new_password) {
-                    Toastr::error('New password and confirm new password do not match !');
+            $new_password = Hash::make($request->new_password);
+            $passwordReset = PasswordResetRepository::findByToken($request->token);
+            if ($passwordReset) { // user, doctor, hospital
+                if ($passwordReset->is_user == 1) {
+                    $user = UserRepository::findUserByEmail($passwordReset->email);
+                    if ($user) {
+                        $data = ['password' => $new_password];
+                        $user = UserRepository::updateUser($user->id, $data);
+                        $passwordReset->delete();
 
-                    return redirect()->back()->withInput();
+                        Toastr::success('Đặt lại mật khẩu thành công !');
+
+                        return redirect()->route('form_reset_password');
+                    }
+                    Toastr::warning('Không thể tìm thấy tài khoản !');
+
+                    return redirect()->route('form_reset_password');
+                } else { // admin, superamdin, manager
+                    $admin = AdminRepository::findAdminByEmail($passwordReset->email);
+                    if ($admin) {
+                        $data = ['password' => $new_password];
+                        $admin = AdminRepository::updateAdmin($admin->id, $data);
+                        $passwordReset->delete();
+
+                        Toastr::success('Đặt lại mật khẩu thành công !');
+
+                        return redirect()->route('admin_form_reset_password');
+                    }
+                    Toastr::warning('Không tìm thấy tài khoản !');
+
+                    return redirect()->route('admin_form_reset_password');
                 }
-                $user = $this->userRepository->findUserbyEmail($userReset->email);
-                if ($user) {
-                    $this->userRepository->updatePassword($user, $new_password);
-                    Toastr::success('Reset Password successful !');
-                    PasswordResetRepository::deleteUser($userReset, $is_user);
-
-                    return redirect('login');
-                }
-                Toastr::error('Can not find the account !');
-
-                return redirect('register');
             } else {
-                Toastr::error('Token has expired !');
+                Toastr::warning('Token đã hết hạn !');
 
-                return redirect('register');
+                return redirect()->route('form_reset_password');
             }
-        } catch (\Exception $e) {
+        } catch (Throwable $e) {
         }
     }
 
-    /**
-     * updateInfor
-     *
-     * @param $filter
-     */
-    public function updateInfor($filter)
-    {
-        $user = $this->userRepository->findUserById(Auth::guard('user')->user()->id);
-        $filter->avatar = null;
-        if ($filter->image) {
-            $filter->avatar = $this->saveAvatar($filter);
-            if (!Str::startsWith($user->avatar, 'http')) {
-                if ($user->avatar) {
-                    File::delete($user->avatar);
-                }
-            }
-        }
-        try {
-            $user = $this->userRepository->updateInfor($user, $filter);
-            Toastr::success('Successfully updated !');
-
-            return redirect()->route('infor.view_infor');
-        } catch (Exception $e) {
-            Toastr::error('Update failed !');
-
-            return redirect()->back()->withInput();
-        }
-    }
-
-    /**
-     * changePassword
-     *
-     * @param $filter
-     */
-    public function changePassword($filter)
+    // verify email
+    public function verifyEmail($token)
     {
         try {
-            $user = $this->userRepository->findUserById(Auth::guard('user')->user()->id);
-            if ($user->password == null) {
-                $this->userRepository->updatePassword($user, Hash::make($filter->new_password));
+            $user = $this->userRepository->findUserByTokenVerifyEmail($token);
+            if ($user) {
+                $data = [
+                    'email_verified_at' => now(),
+                    'token_verify_email' => null,
+                ];
+                $user = $this->userRepository->updateUser($user->id, $data);
+                $status = true;
+                Toastr::success('Email của bạn đã được xác nhận !');
             } else {
-                if ($filter->old_password != $filter->confirm_old_password) {
-                    Toastr::error('Old password and confirm old password do not match !');
-
-                    return redirect()->back()->withInput();
-                }
-
-                if (!Hash::check($filter->old_password, $user->password)) {
-                    Toastr::error('Old password is incorrect !');
-
-                    return redirect()->back()->withInput();
-                }
-                $this->userRepository->updatePassword($user, Hash::make($filter->new_password));
+                $status = false;
+                Toastr::warning('Token đã hết hạn !');
             }
-            Toastr::success('Updated password successfully !');
 
-            return redirect()->route('infor.view_infor');
-        } catch (\Exception $e) {
+            return view('user.status_verify_email', ['status' => $status]);
+        } catch (Throwable $e) {
         }
     }
 
-    /**
-     * allUser
-     *
-     * @return array
-     */
-    public function allUser()
-    {
-        return $this->userRepository->getAllUser()->paginate(6);
-    }
-
-    /**
-     * changeStatus
-     *
-     * @param int $id_user
-     */
-    public function changeStatus($id_user)
+    public function getInforUser($id)
     {
         try {
-            $new_status = $this->userRepository->changeStatus($id_user);
-            if ($new_status == 0 && $id_user == Auth::guard('user')->user()->id) {
-                // Session::flush();
-                Auth::guard('user')->logout();
+            $user = $this->userRepository->findUserById($id);
+            if (empty($user)) {
+                return response()->json(['message' => 'Không tìm thấy tài khoản !'], 404);
             }
-        } catch (\Exception $e) {
-        }
-    }
-
-    /**
-     * ajaxSearchUserAdmin
-     *
-     * @return object
-     */
-    public function ajaxSearchUserAdmin($search_text)
-    {
-        try {
-            $users = $this->userRepository->ajaxSearchUser($search_text)->paginate(6);
-            $render_html = view('admin.render_ajax.user', compact('users'))->render();
-            $pagination = $users->links()->toHtml();
 
             return response()->json([
-                'render_html' => $render_html,
-                'pagination' => $pagination,
-            ]);
-        } catch (\Exception $e) {
+                'user' => $user,
+            ], 201);
+        } catch (Throwable $e) {
+            return response()->json(['message' => $e->getMessage()], 400);
         }
     }
 }

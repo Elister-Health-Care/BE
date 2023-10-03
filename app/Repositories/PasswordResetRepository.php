@@ -3,6 +3,8 @@
 namespace App\Repositories;
 
 use App\Models\PasswordReset;
+use Illuminate\Support\Facades\DB;
+use Throwable;
 
 /**
  * Class ExampleRepository.
@@ -14,74 +16,29 @@ class PasswordResetRepository extends BaseRepository implements PasswordResetInt
         return PasswordReset::class;
     }
 
-    /**
-     * findPasswordReset
-     *
-     * @param string $email
-     * @return object
-     */
-    public static function findPasswordReset($email, $is_user)
+    public static function findPasswordReset($email, $isUser)
     {
-        return (new self)->model->where('email', '=', $email)
-            ->where('is_user', '=', $is_user)
-            ->first();
+        return (new self)->model->where('email', $email)->where('is_user', $isUser)->first();
     }
 
-    /**
-     * findPasswordResetByToken
-     *
-     * @param string $token
-     * @return object
-     */
-    public static function findPasswordResetByToken($token)
+    public static function createToken($email, $isUser, $token)
     {
-        return (new self)->model
-            ->when($token, fn ($q) => $q->where('token', '=', $token))
-            ->first();
+        DB::beginTransaction();
+        try {
+            (new self)->model->create([
+                'email' => $email,
+                'is_user' => $isUser,
+                'token' => $token,
+            ]);
+            DB::commit();
+        } catch (Throwable $e) {
+            DB::rollback();
+            throw $e;
+        }
     }
 
-    /**
-     * updateToken
-     *
-     * @param object $user
-     * @param string $token
-     */
-    public static function updateToken($user, $token)
+    public static function findByToken($token)
     {
-        $user = (new self)->model->find($user->id);
-        $updateData = [
-            'token' => $token,
-        ];
-        $user->update($updateData);
-    }
-
-    /**
-     * createToken
-     *
-     * @param string $email
-     * @param string $token
-     * @return object
-     */
-    public static function createToken($email, $token, $is_user)
-    {
-        return (new self)->model->create([
-            'email' => $email,
-            'is_user' => $is_user,
-            'token' => $token,
-        ]);
-    }
-
-    /**
-     * deleteUser
-     *
-     * @param object $user
-     */
-    public static function deleteUser($user, $is_user)
-    {
-        $user = (new self)->model
-            ->when($user->email, fn ($q) => $q->where('email', '=', $user->email))
-            ->when($is_user, fn ($q) => $q->where('is_user', '=', $is_user))
-            ->first();
-        $user->delete();
+        return (new self)->model->where('token', $token)->first();
     }
 }
