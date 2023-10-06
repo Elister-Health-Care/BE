@@ -2,8 +2,7 @@
 
 namespace App\Repositories;
 
-use App\Models\Example;
-use App\Models\HealthInsurances;
+use App\Models\HealthInsuranceHospital;
 
 class HealthInsuranceHospitalRepository extends BaseRepository implements HealthInsuranceHospitalInterface
 {
@@ -12,20 +11,12 @@ class HealthInsuranceHospitalRepository extends BaseRepository implements Health
         return HealthInsuranceHospital::class;
     }
 
-    public function getExamples($filter)
+    public static function getHealInsurHos($filter)
     {
-        $data = $this->model
-            ->when(!empty($filter->email), function ($q) use ($filter) {
-                $q->where('email', '=', "$filter->email");
-            })
-            ->when(!empty($filter->name), function ($q) use ($filter) {
-                $q->where('name', 'like', "%$filter->name%");
-            })
-            ->when(!empty($filter->start_at), function ($query) use ($filter) {
-                $query->whereDate('created_at', '>=', $filter->start_at);
-            })
-            ->when(!empty($filter->end_at), function ($query) use ($filter) {
-                $query->whereDate('created_at', '<=', $filter->end_at);
+        $filter = (object) $filter;
+        $data = (new self)->model
+            ->when(!empty($filter->id_health_insurance), function ($q) use ($filter) {
+                $q->where('id_health_insurance', $filter->id_health_insurance);
             });
 
         return $data;

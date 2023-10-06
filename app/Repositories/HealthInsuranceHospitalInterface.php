@@ -7,5 +7,5 @@ namespace App\Repositories;
  */
 interface HealthInsuranceHospitalInterface extends RepositoryInterface
 {
-    public function getExamples($filter);
+    public static function getHealInsurHos($filter);
 }
