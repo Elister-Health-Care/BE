@@ -39,6 +39,7 @@ class RequestCreateDepartment extends FormRequest
             'success' => false,
             'message' => 'Validation errors',
             'data' => $errors,
+            'errors' => $validator->errors(),
             'status' => 400,
         ], 400));
     }
