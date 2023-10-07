@@ -176,12 +176,40 @@ class AdminService
         return view('admin.status_verify_email', ['status' => $status]);
     }
 
-    public function allAdmin()
+    public function allAdmin(Request $request)
     {
         try {
-            $allAdmin = $this->adminRepository->getAdmin()->paginate(6);
 
-            return $this->responseOK(200, $allAdmin, 'Xem tất cả quản trị viên thành công !');
+            $search = $request->search;
+            $orderBy = 'id';
+            $orderDirection = 'ASC';
+
+            if ($request->sortlatest == 'true') {
+                $orderBy = 'id';
+                $orderDirection = 'DESC';
+            }
+
+            if ($request->sortname == 'true') {
+                $orderBy = 'name';
+                $orderDirection = ($request->sortlatest == 'true') ? 'DESC' : 'ASC';
+            }
+
+            $filter = (object) [
+                'search' => $search,
+                'role' => $request->role ?? '',
+                'orderBy' => $orderBy,
+                'orderDirection' => $orderDirection,
+            ];
+
+            if (!(empty($request->paginate))) {
+                $allAdmin = $this->adminRepository->searchAdmin($filter)->paginate($request->paginate);
+                return $this->responseOK(200, $allAdmin, 'Xem tất cả quản trị thành công !');
+            }
+            else {
+                $allAdmin = $this->adminRepository->searchAdmin($filter)->get();
+                return $this->responseOK(200, $allAdmin, 'Xem tất cả quản trị thành công !');
+            }
+
         } catch (Throwable $e) {
             return $this->responseError(400, $e->getMessage());
         }
@@ -190,33 +218,34 @@ class AdminService
     public function allUser(Request $request)
     {
         try {
-            if (!(empty($request->paginate))) {
-                $search = $request->search;
+
+            $search = $request->search;
+            $orderBy = 'id';
+            $orderDirection = 'ASC';
+
+            if ($request->sortlatest == 'true') {
                 $orderBy = 'id';
-                $orderDirection = 'ASC';
-    
-                if ($request->sortlatest == 'true') {
-                    $orderBy = 'id';
-                    $orderDirection = 'DESC';
-                }
-    
-                if ($request->sortname == 'true') {
-                    $orderBy = 'name';
-                    $orderDirection = ($request->sortlatest == 'true') ? 'DESC' : 'ASC';
-                }
-    
-                $filter = (object) [
-                    'search' => $search,
-                    'role' => $request->role ?? '',
-                    'orderBy' => $orderBy,
-                    'orderDirection' => $orderDirection,
-                ];
+                $orderDirection = 'DESC';
+            }
+
+            if ($request->sortname == 'true') {
+                $orderBy = 'name';
+                $orderDirection = ($request->sortlatest == 'true') ? 'DESC' : 'ASC';
+            }
+
+            $filter = (object) [
+                'search' => $search,
+                'role' => $request->role ?? '',
+                'orderBy' => $orderBy,
+                'is_accept' => $request->is_accept ?? 'both',
+                'orderDirection' => $orderDirection,
+            ];
+
+            if (!(empty($request->paginate))) {
                 $allUser = UserRepository::searchUser($filter)->paginate($request->paginate);
-    
                 return $this->responseOK(200, $allUser, 'Xem tất cả người dùng thành công !');
             }
             else {
-                $filter = (object) [];
                 $allUser = UserRepository::searchUser($filter)->get();
                 return $this->responseOK(200, $allUser, 'Xem tất cả người dùng thành công !');
             }
