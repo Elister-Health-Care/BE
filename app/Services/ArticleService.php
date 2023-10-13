@@ -4,8 +4,10 @@ namespace App\Services;
 
 use App\Http\Requests\RequestCreateArticle;
 use App\Http\Requests\RequestUpdateArticle;
+use App\Models\InforDoctor;
 use App\Repositories\ArticleInterface;
 use App\Repositories\CategoryRepository;
+use App\Repositories\InforDoctorRepository;
 use App\Repositories\UserRepository;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -85,19 +87,18 @@ class ArticleService
     public function edit(RequestUpdateArticle $request, $id)
     {
         try {
-
             $user = Auth::user();
             $article = $this->articleRepository->findById($id);
             if (empty($article)) return $this->responseError(404, 'Không tìm thấy bài viết !');
 
             if(in_array($user->role, ['doctor','hospital']) && ($user->id != $article->id_user)) {
-                
-            }
-
-            $article = $this->articleRepository->findById($id);
-            if ($user->id != $article->id_user) {
+                return $this->responseError(400, 'Bạn không có quyền chỉnh sửa bài viết này !');
+            } 
+            else if (in_array($user->role, ['admin','superadmin', 'manager']) && ($user->id != null)) {
                 return $this->responseError(400, 'Bạn không có quyền chỉnh sửa bài viết này !');
             }
+            else {}
+
             if ($request->hasFile('thumbnail')) {
                 if ($article->thumbnail) {
                     File::delete($article->thumbnail);
@@ -184,50 +185,6 @@ class ArticleService
         }
     }
 
-    // home 
-    public function all(Request $request)
-    {
-        try {
-            $name_category = '';
-            if (!empty($request->name_category)) {
-                $name_category = $request->name_category;
-            }
-            $search = $request->search;
-            $orderBy = 'articles.id';
-            $orderDirection = 'ASC';
-
-            if ($request->sortlatest == 'true') {
-                $orderBy = 'articles.id';
-                $orderDirection = 'DESC';
-            }
-
-            if ($request->sortname == 'true') {
-                $orderBy = 'articles.title';
-                $orderDirection = ($request->sortlatest == 'true') ? 'DESC' : 'ASC';
-            }
-
-            $filter = (object) [
-                'search' => $search,
-                'name_category' => $name_category,
-                'orderBy' => $orderBy,
-                'orderDirection' => $orderDirection,
-                'is_accept' => 1,
-                'is_show' => 1,
-            ];
-
-            if (!(empty($request->paginate))) {
-                $articles = $this->articleRepository->searchAll($filter)->paginate($request->paginate);
-            }
-            else {
-                $articles = $this->articleRepository->searchAll($filter)->get();
-            }
-            return $this->responseOK(200, $articles, 'Xem tất cả bài viết thành công !');
-        } catch (Throwable $e) {
-            return $this->responseError(400, $e->getMessage());
-        }
-    }
-
-
     // admin manage all article 
     public function adminManage(Request $request)
     {
@@ -273,8 +230,63 @@ class ArticleService
         }
     }
 
-    // doctor , hospital 
-    public function articleOfUser(Request $request)
+    // hospital 
+    public function articleOfHospital(Request $request)
+    {
+        try {
+
+            $user = UserRepository::findUserById(auth('user_api')->user()->id);
+            if(empty($user)) return $this->responseError(400, 'Không tìm thấy người dùng !');
+            
+            $doctors = InforDoctorRepository::getInforDoctor(['id_hospital' => $user->id])->get();
+            $idDoctorHospitals = [];
+            $idDoctorHospitals[] = $user->id;
+            foreach ($doctors as $doctor) {
+                $idDoctorHospitals[] = $doctor->id_doctor;
+            }
+
+            $name_category = '';
+            if (!empty($request->name_category)) {
+                $name_category = $request->name_category;
+            }
+            $search = $request->search;
+            $orderBy = 'articles.id';
+            $orderDirection = 'ASC';
+
+            if ($request->sortlatest == 'true') {
+                $orderBy = 'articles.id';
+                $orderDirection = 'DESC';
+            }
+
+            if ($request->sortname == 'true') {
+                $orderBy = 'articles.title';
+                $orderDirection = ($request->sortlatest == 'true') ? 'DESC' : 'ASC';
+            }
+
+            $filter = (object) [
+                'search' => $search,
+                'name_category' => $name_category,
+                'orderBy' => $orderBy,
+                'orderDirection' => $orderDirection,
+                'is_accept' => $request->is_accept ?? 'both',
+                'is_show' => $request->is_show ?? 'both',
+                'id_doctor_hospital' => $idDoctorHospitals,
+            ];
+
+            if (!(empty($request->paginate))) {
+                $articles = $this->articleRepository->searchAll($filter)->paginate($request->paginate);
+            }
+            else {
+                $articles = $this->articleRepository->searchAll($filter)->get();
+            }
+            return $this->responseOK(200, $articles, 'Xem tất cả bài viết thành công !');
+        } catch (Throwable $e) {
+            return $this->responseError(400, $e->getMessage());
+        }
+    }
+
+    // doctor 
+    public function articleOfDoctor(Request $request)
     {
         try {
 
@@ -307,6 +319,49 @@ class ArticleService
                 'is_accept' => $request->is_accept ?? 'both',
                 'is_show' => $request->is_show ?? 'both',
                 'id_user' => auth('user_api')->user()->id,
+            ];
+
+            if (!(empty($request->paginate))) {
+                $articles = $this->articleRepository->searchAll($filter)->paginate($request->paginate);
+            }
+            else {
+                $articles = $this->articleRepository->searchAll($filter)->get();
+            }
+            return $this->responseOK(200, $articles, 'Xem tất cả bài viết thành công !');
+        } catch (Throwable $e) {
+            return $this->responseError(400, $e->getMessage());
+        }
+    }
+
+    // home 
+    public function articleHome(Request $request)
+    {
+        try {
+            $name_category = '';
+            if (!empty($request->name_category)) {
+                $name_category = $request->name_category;
+            }
+            $search = $request->search;
+            $orderBy = 'articles.id';
+            $orderDirection = 'ASC';
+
+            if ($request->sortlatest == 'true') {
+                $orderBy = 'articles.id';
+                $orderDirection = 'DESC';
+            }
+
+            if ($request->sortname == 'true') {
+                $orderBy = 'articles.title';
+                $orderDirection = ($request->sortlatest == 'true') ? 'DESC' : 'ASC';
+            }
+
+            $filter = (object) [
+                'search' => $search,
+                'name_category' => $name_category,
+                'orderBy' => $orderBy,
+                'orderDirection' => $orderDirection,
+                'is_accept' => 1,
+                'is_show' => 1,
             ];
 
             if (!(empty($request->paginate))) {
