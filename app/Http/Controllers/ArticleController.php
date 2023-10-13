@@ -46,14 +46,19 @@ class ArticleController extends Controller
         return $this->articleService->adminManage($request);
     }
 
-    public function articleOfUser(Request $request)
+    public function articleOfHospital(Request $request)
     {
-        return $this->articleService->articleOfUser($request);
+        return $this->articleService->articleOfHospital($request);
     }
 
-    public function all(Request $request)
+    public function articleOfDoctor(Request $request)
     {
-        return $this->articleService->all($request);
+        return $this->articleService->articleOfDoctor($request);
+    }
+
+    public function articleHome(Request $request)
+    {
+        return $this->articleService->articleHome($request);
     }
 
     public function details(Request $request, $id)

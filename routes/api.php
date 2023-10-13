@@ -127,14 +127,14 @@ Route::prefix('article')->controller(ArticleController::class)->group(function (
     });
 
     Route::middleware(['auth:user_api', 'role:hospital'])->group(function () {
-        Route::get('/user', 'articleOfHospital');
+        Route::get('/hospital', 'articleOfHospital');
     });
 
     Route::middleware(['auth:user_api', 'role:doctor'])->group(function () {
-        Route::get('/user', 'articleOfDoctor');
+        Route::get('/doctor', 'articleOfDoctor');
     });
 
-    Route::get('/', 'all');
+    Route::get('/', 'articleHome');
     Route::get('/detail/{id}', 'details');
 });
 
