@@ -8,14 +8,17 @@
         "php": "^8.0.2",
         "brian2694/laravel-toastr": "^5.57",
         "darkaonline/l5-swagger": "^8.5",
+        "drnxloc/laravel-simple-html-dom": "^1.9",
         "fruitcake/laravel-cors": "^2.0.5",
         "guzzlehttp/guzzle": "^7.8",
+        "kub-at/php-simple-html-dom-parser": "^1.9",
         "laravel/framework": "^9.0",
         "laravel/sanctum": "^3.2",
         "laravel/tinker": "^2.7",
         "socialiteproviders/github": "4.1",
         "socialiteproviders/google": "4.1",
         "socialiteproviders/twitter": "4.1",
+        "sunra/php-simple-html-dom-parser": "1.5.2",
         "tomfordrumm/jwt-auth": "dev-develop"
     },
     "require-dev": {
