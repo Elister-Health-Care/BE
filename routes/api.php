@@ -40,7 +40,7 @@ Route::prefix('admin')->controller(AdminController::class)->group(function () {
         Route::get('logout', 'logout');
         Route::get('profile', 'profile');
         Route::post('change-password', 'changePassword');
-        Route::post('update/{admin}', 'updateProfile');
+        Route::post('update', 'updateProfile');
         Route::get('all-user', 'allUser');
         Route::post('change-accept/{id}', 'changeAccept');
     });
@@ -74,7 +74,7 @@ Route::prefix('infor-user')->controller(InforUserController::class)->group(funct
     Route::get('authorized/google/callback', [InforUserController::class, 'handleGoogleCallback']);
     Route::middleware(['auth:user_api', 'role:user'])->group(function () {
         Route::post('create-password', 'createPassword');
-        Route::post('update/{user}', 'updateProfile');
+        Route::post('update', 'updateProfile');
         Route::get('profile', 'profile');
         Route::post('create-password', 'createPassword');
     });
@@ -84,7 +84,7 @@ Route::prefix('infor-user')->controller(InforUserController::class)->group(funct
 Route::prefix('infor-hospital')->controller(InforHospitalController::class)->group(function () {
     Route::post('register', 'register');
     Route::middleware(['auth:user_api', 'role:hospital'])->group(function () {
-        Route::post('update/{user}', 'updateProfile');
+        Route::post('update', 'updateProfile');
         Route::get('profile', 'profile');
         Route::post('add-doctor', 'addDoctor');
     });
@@ -93,7 +93,7 @@ Route::prefix('infor-hospital')->controller(InforHospitalController::class)->gro
 // Doctor Infor
 Route::prefix('infor-doctor')->controller(InforDoctorController::class)->group(function () {
     Route::middleware(['auth:user_api', 'role:doctor'])->group(function () {
-        Route::post('update/{user}', 'updateProfile');
+        Route::post('update', 'updateProfile');
         Route::get('profile', 'profile');
         Route::post('add-doctor', 'addDoctor');
     });
