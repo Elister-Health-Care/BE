@@ -61,8 +61,8 @@ Route::prefix('user')->controller(UserController::class)->group(function () {
     Route::middleware('auth:user_api')->group(function () {
         Route::get('logout', 'logout');
         Route::post('change-password', 'changePassword');
-        Route::get('infor-user/{id}', 'getInforUser');
     });
+    Route::get('infor-user/{id}', 'getInforUser');
 });
 
 // User Infor
