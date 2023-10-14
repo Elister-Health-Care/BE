@@ -86,7 +86,7 @@ class ArticleRepository extends BaseRepository implements ArticleInterface
                 });
             })
             ->when(!empty($filter->name_category), function ($query) use ($filter) {
-                return $query->where('name', '=', $filter->name_category);
+                return $query->where('categories.name', '=', $filter->name_category);
             })
             ->when(!empty($filter->orderBy), function ($query) use ($filter) {
                 $query->orderBy($filter->orderBy, $filter->orderDirection);

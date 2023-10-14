@@ -36,9 +36,9 @@ class ArticleController extends Controller
         return $this->articleService->changeAccept($request, $id);
     }
 
-    public function delete(Request $request)
+    public function delete($id)
     {
-        return $this->articleService->delete($request);
+        return $this->articleService->delete($id);
     }
 
     public function adminManage(Request $request)
