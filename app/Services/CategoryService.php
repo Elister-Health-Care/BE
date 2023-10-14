@@ -60,7 +60,7 @@ class CategoryService
             ];
             $category = CategoryRepository::updateCategory($category->id, $data);
 
-            return $this->responseOK(200, $category, 'Thêm danh mục thành công !');
+            return $this->responseOK(201, $category, 'Thêm danh mục thành công !');
         } catch (Throwable $e) {
             return $this->responseError(400, $e->getMessage());
         }
@@ -102,7 +102,7 @@ class CategoryService
 
                 return $this->responseOK(200, null, 'Xóa danh mục thành công !');
             } else {
-                return $this->responseError(400, 'Không tìm thấy danh mục !');
+                return $this->responseError(404, 'Không tìm thấy danh mục !');
             }
         } catch (Throwable $e) {
             return $this->responseError(400, $e->getMessage());
@@ -113,36 +113,35 @@ class CategoryService
     {
         try {
             $list_id = $request->list_id;
-            // dd($list_id); // vẫn là một mảng , nếu k lưu vào database thì k cần encode 
+            // dd($list_id); // vẫn là một mảng , nếu k lưu vào database thì k cần encode
             $categories = CategoryRepository::getCategory(['list_id' => $list_id])->get();
-            if (!$categories->isEmpty()) { // hay 
+            if (!$categories->isEmpty()) { // hay
                 $articles = ArticleRepository::getArticle(['list_id' => $list_id]);
                 ArticleRepository::updateArticle($articles, ['id_category' => null]);
                 foreach ($categories as $category) {
                     if ($category->thumbnail) {
                         // Kiểm tra và xóa tệp
                         if (File::delete($category->thumbnail)) {
-                            $category->delete(); // xóa tửng bảng ghi cũng được 
+                            $category->delete(); // xóa tửng bảng ghi cũng được
                         } else {
                             return $this->responseError(400, 'Lỗi khi xóa tệp liên quan đến danh mục.');
                         }
                     }
                 }
+
                 return $this->responseOK(200, null, 'Xóa các danh mục thành công!');
             } else {
-                return $this->responseError(400, 'Không tìm thấy danh mục nào để xóa.');
+                return $this->responseError(404, 'Không tìm thấy danh mục nào để xóa.');
             }
         } catch (Throwable $e) {
             // Ghi log lỗi hoặc trả về thông báo lỗi
             return $this->responseError(400, $e->getMessage());
         }
     }
-    
-    
+
     public function all(Request $request)
     {
         try {
-
             $search = $request->search;
             $orderBy = 'id';
             $orderDirection = 'ASC';
@@ -168,6 +167,7 @@ class CategoryService
             } else {
                 $categorys = CategoryRepository::getCategory($filter)->get();
             }
+
             return $this->responseOK(200, $categorys, 'Xem tất cả danh mục thành công !');
         } catch (Throwable $e) {
             return $this->responseError(400, $e->getMessage());
@@ -181,7 +181,7 @@ class CategoryService
             if ($category) {
                 return $this->responseOK(200, $category, 'Xem danh mục chi tiết thành công !');
             } else {
-                return $this->responseError(400, 'Không tìm thấy danh mục !');
+                return $this->responseError(404, 'Không tìm thấy danh mục !');
             }
         } catch (Throwable $e) {
             return $this->responseError(400, $e->getMessage());

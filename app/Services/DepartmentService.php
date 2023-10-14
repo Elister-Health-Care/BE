@@ -58,7 +58,7 @@ class DepartmentService
             $data = ['thumbnail' => $thumbnail];
             $department = $this->departmentRepository->updateDepartment($department, $data);
 
-            return $this->responseOK(200, $department, 'Thêm khoa thành công !');
+            return $this->responseOK(201, $department, 'Thêm khoa thành công !');
         } catch (Throwable $e) {
             return $this->responseError(400, $e->getMessage());
         }
@@ -82,7 +82,7 @@ class DepartmentService
 
                 return $this->responseOK(200, $department, 'Cập nhật thông tin khoa thành công !');
             } else {
-                return $this->responseError(400, 'Không tìm thấy khoa !');
+                return $this->responseError(404, 'Không tìm thấy khoa !');
             }
         } catch (Throwable $e) {
             return $this->responseError(400, $e->getMessage());
@@ -112,7 +112,7 @@ class DepartmentService
 
                 return $this->responseOK(200, null, 'Xóa khoa thành công !');
             } else {
-                return $this->responseError(400, 'Không tìm thấy khoa !');
+                return $this->responseError(404, 'Không tìm thấy khoa !');
             }
         } catch (Throwable $e) {
             return $this->responseError(400, $e->getMessage());
@@ -122,7 +122,6 @@ class DepartmentService
     public function all(Request $request)
     {
         try {
-
             $search = $request->search;
             $orderBy = 'id';
             $orderDirection = 'ASC';
@@ -147,8 +146,8 @@ class DepartmentService
             } else {
                 $departments = $this->departmentRepository->searchDepartment($filter)->get();
             }
-            return $this->responseOK(200, $departments, 'Xem tất cả khoa thành công !');
 
+            return $this->responseOK(200, $departments, 'Xem tất cả khoa thành công !');
         } catch (Throwable $e) {
             return $this->responseError(400, $e->getMessage());
         }
@@ -161,7 +160,7 @@ class DepartmentService
             if ($department) {
                 return $this->responseOK(200, $department, 'Xem chi tiết khoa thành công !');
             } else {
-                return $this->responseError(400, 'Không tìm thấy khoa !');
+                return $this->responseError(404, 'Không tìm thấy khoa !');
             }
         } catch (Throwable $e) {
             return $this->responseError(400, $e->getMessage());

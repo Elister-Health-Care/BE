@@ -104,23 +104,23 @@ class InforHospitalService
                 $inforUser->infrastructure = json_decode($inforUser->infrastructure);
                 $inforUser->location = json_decode($inforUser->location);
 
-                // addTimeWork 
+                // addTimeWork
                 $timeDefault = [
                     'enable' => true,
                     'morning' => [
                         'enable' => true,
-                        'time' => ['7:30', '11:30']
+                        'time' => ['7:30', '11:30'],
                     ],
                     'afternoon' => [
                         'enable' => true,
-                        'time' => ['13:30', '17:30']
+                        'time' => ['13:30', '17:30'],
                     ],
                     'night' => [
                         'enable' => true,
-                        'time' => ['18:00', '20:00']
-                    ]
+                        'time' => ['18:00', '20:00'],
+                    ],
                 ];
-                
+
                 $dataTimeWork = [
                     'id_hospital' => $user->id,
                     'enable' => true,
@@ -135,15 +135,15 @@ class InforHospitalService
                         'friday' => $timeDefault,
                         'saturday' => $timeDefault,
                         'sunday' => $timeDefault,
-                    ])
+                    ]),
                 ];
                 $timeWork = TimeWorkRepository::createTimeWork($dataTimeWork);
                 $timeWork->times = json_decode($timeWork->times);
-                // addTimeWork 
+                // addTimeWork
 
                 $hospital = array_merge($user->toArray(), $inforUser->toArray(), $timeWork->toArray());
 
-                return $this->responseOK(200, $hospital, 'Đăng kí tài khoản thành công . Hãy kiểm tra mail và xác nhận nó !');
+                return $this->responseOK(201, $hospital, 'Đăng kí tài khoản thành công . Hãy kiểm tra mail và xác nhận nó !');
             }
         } catch (Throwable $e) {
             return $this->responseError(400, $e->getMessage());
@@ -226,7 +226,7 @@ class InforHospitalService
         try {
             $department = DepartmentRepository::findById($request->id_department);
             if (empty($department)) {
-                return $this->responseError(400, 'Không tìm thấy khoa !');
+                return $this->responseError(404, 'Không tìm thấy khoa !');
             }
             $hospital = UserRepository::findUserById(auth('user_api')->user()->id);
 
@@ -289,7 +289,7 @@ class InforHospitalService
 
             $hospital = array_merge($doctor->toArray(), $inforDoctor->toArray());
 
-            return $this->responseOK(200, $hospital, 'Thêm tài khoản bác sĩ thành công !');
+            return $this->responseOK(201, $hospital, 'Thêm tài khoản bác sĩ thành công !');
         } catch (Throwable $e) {
             DB::rollback();
 
