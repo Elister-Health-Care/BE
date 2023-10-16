@@ -12,6 +12,7 @@ use App\Http\Controllers\InforDoctorController;
 use App\Http\Controllers\InforHospitalController;
 use App\Http\Controllers\InforUserController;
 use App\Http\Controllers\ProvinceController;
+use App\Http\Controllers\PublicController;
 use App\Http\Controllers\TimeWorkController;
 use App\Http\Controllers\UserController;
 use Illuminate\Http\Request;
@@ -87,6 +88,8 @@ Route::prefix('infor-hospital')->controller(InforHospitalController::class)->gro
         Route::post('update', 'updateProfile');
         Route::get('profile', 'profile');
         Route::post('add-doctor', 'addDoctor');
+        Route::get('all-doctor', 'allDoctor');
+        Route::post('change-confirm/{id}', 'changeConfirm');
     });
 });
 
@@ -204,5 +207,10 @@ Route::prefix('time-work')->controller(TimeWorkController::class)->group(functio
     Route::get('/service', 'service');
 });
 
+Route::prefix('public')->controller(PublicController::class)->group(function () {
+    Route::post('/read-search/{name}/{id}', 'readSearch');
+});
+
 // Seeder Value
 Route::get('province', [ProvinceController::class, 'all']);
+
