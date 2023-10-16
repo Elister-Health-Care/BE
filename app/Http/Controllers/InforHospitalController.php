@@ -2,10 +2,12 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\RequestChangeConfirmDoctor;
 use App\Http\Requests\RequestCreateInforHospital;
 use App\Http\Requests\RequestCreateNewDoctor;
 use App\Http\Requests\RequestUpdateHospital;
 use App\Services\InforHospitalService;
+use Illuminate\Http\Request;
 
 class InforHospitalController extends Controller
 {
@@ -26,6 +28,11 @@ class InforHospitalController extends Controller
         return $this->inforHospitalService->profile();
     }
 
+    public function viewProfile(Request $request, $id)
+    {
+        return $this->inforHospitalService->viewProfile($request, $id);
+    }
+
     public function updateProfile(RequestUpdateHospital $request)
     {
         return $this->inforHospitalService->updateProfile($request);
@@ -34,5 +41,14 @@ class InforHospitalController extends Controller
     public function addDoctor(RequestCreateNewDoctor $request)
     {
         return $this->inforHospitalService->addDoctor($request);
+    }
+
+    public function allDoctor(Request $request)
+    {
+        return $this->inforHospitalService->allDoctor($request);
+    }
+
+    public function changeConfirm(RequestChangeConfirmDoctor $request, $id) {
+        return $this->inforHospitalService->changeConfirm($request, $id);
     }
 }
