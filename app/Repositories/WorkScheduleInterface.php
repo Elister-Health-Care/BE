@@ -8,7 +8,7 @@ interface WorkScheduleInterface extends RepositoryInterface
     
     public static function createWorkSchedule($data);
 
-    // public static function getCategory($filter);
+    public static function getWorkSchedule($filter);
 
     // public static function updateCategory($id, $data);
 

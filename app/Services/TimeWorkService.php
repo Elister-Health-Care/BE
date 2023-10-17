@@ -6,6 +6,7 @@ use App\Http\Requests\RequestUpdateTimeWork;
 use App\Repositories\HospitalDepartmentRepository;
 use App\Repositories\InforDoctorRepository;
 use App\Repositories\TimeWorkInterface;
+use App\Repositories\WorkScheduleRepository;
 use Carbon\Carbon;
 use Throwable;
 
@@ -148,18 +149,85 @@ class TimeWorkService
             $timeWork->times->$currentDayName->afternoon->divided_times = filterTimes($timeWork->times->$currentDayName->afternoon->divided_times);
             $timeWork->times->$currentDayName->night->divided_times = filterTimes($timeWork->times->$currentDayName->night->divided_times);
 
+            // loại bỏ đi các ngày mà bác sĩ bận trong work_chedule 
+            foreach ($daysOfWeek as $dayOfWeek) {
+                if($timeWork->times->$dayOfWeek->enable == false) {
+                    $timeWork->times->$dayOfWeek =  null; // bỏ ngày đó ra khỏi lịch luôn 
+                }
+                else {
+                    $time = [];
+                    $time['date'] = $timeWork->times->$dayOfWeek->date;
+
+                    // morning
+                    $newDividedTimes = [];
+                    foreach ($timeWork->times->$dayOfWeek->morning->divided_times as $index => $interval) {
+                        $time['interval'] = $interval;
+                        $filter = [
+                            'time' => $time,
+                            'id_doctor' => $id_doctor,
+                        ];
+                        $n = WorkScheduleRepository::getWorkSchedule($filter)->count();
+                        if ($n == 0) {
+                            $newDividedTimes[] = $interval;
+                        }
+                    }
+                    $timeWork->times->$dayOfWeek->morning->divided_times = $newDividedTimes;
+
+                    // afternoon
+                    $newDividedTimes = [];
+                    foreach ($timeWork->times->$dayOfWeek->afternoon->divided_times as $index => $interval) {
+                        $time['interval'] = $interval;
+                        $filter = [
+                            'time' => $time,
+                            'id_doctor' => $id_doctor,
+                        ];
+                        $n = WorkScheduleRepository::getWorkSchedule($filter)->count();
+                        if ($n == 0) {
+                            $newDividedTimes[] = $interval;
+                        }
+                    }
+                    $timeWork->times->$dayOfWeek->afternoon->divided_times = $newDividedTimes;
+
+                    // night
+                    $newDividedTimes = [];
+                    foreach ($timeWork->times->$dayOfWeek->night->divided_times as $index => $interval) {
+                        $time['interval'] = $interval;
+                        $filter = [
+                            'time' => $time,
+                            'id_doctor' => $id_doctor,
+                        ];
+                        $n = WorkScheduleRepository::getWorkSchedule($filter)->count();
+                        if ($n == 0) {
+                            $newDividedTimes[] = $interval;
+                        }
+                    }
+                    $timeWork->times->$dayOfWeek->night->divided_times = $newDividedTimes;
+                }
+            }
+
+
+
+
+
+            // BỔ SUNG : loại bỏ đi ngày (shift of = 4) hoặc các ca của mà bác sĩ xin nghỉ trong vacations chedule 
+
+
+
+
+
             // bổ sung một số thông tin khác . space = còn chỗ của ngày đó 
             foreach ($daysOfWeek as $dayOfWeek) {
-                // if($timeWork->times->$dayOfWeek->enable == false) {
-                //     $timeWork->times->$dayOfWeek =  null; // bỏ ngày đó ra khỏi lịch luôn 
-                // }
-                // else {
+                if($timeWork->times->$dayOfWeek != null) {
                     $timeWork->times->$dayOfWeek->space = 
                     count($timeWork->times->$dayOfWeek->morning->divided_times) + 
                     count($timeWork->times->$dayOfWeek->afternoon->divided_times) + 
                     count($timeWork->times->$dayOfWeek->night->divided_times);
-                // }
+                }
             }
+
+
+
+
 
             return $this->responseOK(200, $timeWork, 'Xem chi tiết lịch làm việc thành công !');
         } catch (Throwable $e) {
