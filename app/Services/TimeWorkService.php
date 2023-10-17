@@ -3,7 +3,10 @@
 namespace App\Services;
 
 use App\Http\Requests\RequestUpdateTimeWork;
+use App\Repositories\HospitalDepartmentRepository;
+use App\Repositories\InforDoctorRepository;
 use App\Repositories\TimeWorkInterface;
+use Carbon\Carbon;
 use Throwable;
 
 class TimeWorkService
@@ -67,4 +70,102 @@ class TimeWorkService
             return response()->json(['message' => $e->getMessage()], 400);
         }
     }
+
+    public function advise($id_doctor)
+    {
+        try {
+            // infor doctor 
+            $inforDoctor = InforDoctorRepository::getInforDoctor(['id_doctor' => $id_doctor])->first();
+            if(empty($inforDoctor)) return $this->responseError(404, 'Không tìm thấy bác sĩ !');
+            
+            // time_advise
+            $hospitalDepartment = HospitalDepartmentRepository::searchHospitalDepartment([
+                'id_department' => $inforDoctor->id_department,
+                'id_hospital' => $inforDoctor->id_hospital,
+            ])->first();
+
+            // time_work 
+            $filter = (object) [
+                'id_hospital' => $inforDoctor->id_hospital,
+            ];
+            $timeWork = $this->timeWorkRepository->getTimeWork($filter)->first();
+            $timeWork->times = json_decode($timeWork->times);
+
+            // loại bỏ các thứ trong quá khứ 
+            $currentDayName = strtolower(date('l'));
+            $daysOfWeek = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
+            $currentDayIndex = array_search($currentDayName, $daysOfWeek);
+            foreach ($daysOfWeek as $dayOfWeek) {
+                if (array_search($dayOfWeek, $daysOfWeek) < $currentDayIndex) {
+                    $timeWork->times->$dayOfWeek->enable = false;
+                }
+            }
+
+            // gắn ngày vào cho các thứ 
+            $currentDate = now()->startOfWeek();
+            foreach ($daysOfWeek as $dayOfWeek) {
+                $timeWork->times->$dayOfWeek->date = $currentDate->format('Y-m-d');
+                $currentDate->addDay(1); 
+            }
+
+            // chia nhỏ lịch làm việc ra 
+            function divideTime($timeArray, $maxMinutes) {
+                $start = strtotime($timeArray[0]);
+                $end = strtotime($timeArray[1]);
+                $dividedTimes = [];
+                while ($start < $end) {
+                    $nextEnd = $start + ($maxMinutes * 60);
+                    if ($nextEnd > $end) {
+                        break; // Loại bỏ đoạn thời gian ngắn hơn $maxMinutes
+                    }
+                    $dividedTimes[] = [date("H:i", $start), date("H:i", $nextEnd)];
+                    $start = $nextEnd;
+                }
+                return $dividedTimes;
+            }
+            $maxMinutes = $hospitalDepartment->time_advise;
+            foreach ($timeWork->times as $index => $day) {
+                $day->morning->divided_times = divideTime($day->morning->time, $maxMinutes);
+                $day->afternoon->divided_times = divideTime($day->afternoon->time, $maxMinutes);
+                $day->night->divided_times = divideTime($day->night->time, $maxMinutes);
+            }
+            // chia nhỏ lịch làm việc ra 
+
+            // loại bỏ đi các khoảng thời gian đã qua của ngày hiện tại 
+            function filterTimes($divided_times) {
+                $current_time = date("H:i");
+                $new_divided_times = [];
+                foreach ($divided_times as $key => $time_segment) {
+                    $start_time = $time_segment[0];
+                    if ($start_time >= $current_time) {
+                        $new_divided_times = array_slice($divided_times, $key);
+                        break;
+                    }
+                }
+                return $new_divided_times;
+            }
+            $timeWork->times->$currentDayName->morning->divided_times = filterTimes($timeWork->times->$currentDayName->morning->divided_times);
+            $timeWork->times->$currentDayName->afternoon->divided_times = filterTimes($timeWork->times->$currentDayName->afternoon->divided_times);
+            $timeWork->times->$currentDayName->night->divided_times = filterTimes($timeWork->times->$currentDayName->night->divided_times);
+
+            // bổ sung một số thông tin khác . space = còn chỗ của ngày đó 
+            foreach ($daysOfWeek as $dayOfWeek) {
+                // if($timeWork->times->$dayOfWeek->enable == false) {
+                //     $timeWork->times->$dayOfWeek =  null; // bỏ ngày đó ra khỏi lịch luôn 
+                // }
+                // else {
+                    $timeWork->times->$dayOfWeek->space = 
+                    count($timeWork->times->$dayOfWeek->morning->divided_times) + 
+                    count($timeWork->times->$dayOfWeek->afternoon->divided_times) + 
+                    count($timeWork->times->$dayOfWeek->night->divided_times);
+                // }
+            }
+
+            return $this->responseOK(200, $timeWork, 'Xem chi tiết lịch làm việc thành công !');
+        } catch (Throwable $e) {
+            return response()->json(['message' => $e->getMessage()], 400);
+        }
+    }
+
+    
 }
