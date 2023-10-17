@@ -151,6 +151,9 @@ class UserRepository extends BaseRepository implements UserInterface
             ->when(!empty($filter->id_hospital), function ($query) use ($filter) {
                 return $query->where('infor_doctors.id_hospital',  $filter->id_hospital);
             })
+            ->when(!empty($filter->id_department), function ($query) use ($filter) {
+                return $query->where('infor_doctors.id_department',  $filter->id_department);
+            })
             ->when(!empty($filter->orderBy), function ($query) use ($filter) {
                 $query->orderBy($filter->orderBy, $filter->orderDirection);
             });
