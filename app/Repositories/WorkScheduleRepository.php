@@ -33,55 +33,60 @@ class WorkScheduleRepository extends BaseRepository implements WorkScheduleInter
         }
     }
 
-    public static function getCategory($filter)
+    public static function getWorkSchedule($filter)
     {
         $filter = (object) $filter;
         $data = (new self)->model
             ->when(!empty($filter->id), function ($q) use ($filter) {
                 $q->where('id', $filter->id);
             })
-            ->when(!empty($filter->list_id), function ($q) use ($filter) {
-                $q->whereIn('id', $filter->list_id);
+            ->when(!empty($filter->id_doctor), function ($q) use ($filter) {
+                $q->where('id_doctor', $filter->id_doctor);
+            })
+            ->when(!empty($filter->time), function ($q) use ($filter) {
+                $q->whereJsonContains('time', [
+                    'date' => $filter->time['date'],
+                    'interval' => $filter->time['interval']
+                ]);
             });
-
         return $data;
     }
 
-    public static function updateCategory($id, $data)
-    {
-        DB::beginTransaction();
-        try {
-            $category = (new self)->model->find($id);
-            $category->update($data);
-            DB::commit();
+    // public static function updateCategory($id, $data)
+    // {
+    //     DB::beginTransaction();
+    //     try {
+    //         $category = (new self)->model->find($id);
+    //         $category->update($data);
+    //         DB::commit();
 
-            return $category;
-        } catch (Throwable $e) {
-            DB::rollback();
-            throw $e;
-        }
-    }
+    //         return $category;
+    //     } catch (Throwable $e) {
+    //         DB::rollback();
+    //         throw $e;
+    //     }
+    // }
 
-    public static function updateResultCategory($result, $data)
-    {
-        DB::beginTransaction();
-        try {
-            $result->update($data);
-            DB::commit();
+    // public static function updateResultCategory($result, $data)
+    // {
+    //     DB::beginTransaction();
+    //     try {
+    //         $result->update($data);
+    //         DB::commit();
 
-            return $result;
-        } catch (Throwable $e) {
-            DB::rollback();
-            throw $e;
-        }
-    }
+    //         return $result;
+    //     } catch (Throwable $e) {
+    //         DB::rollback();
+    //         throw $e;
+    //     }
+    // }
 
-    public static function searchCategory($filter)
-    {
-        $filter = (object) $filter;
-        $data = (new self)->model->orderBy($filter->orderBy, $filter->orderDirection)
-            ->where('name', 'LIKE', '%' . $filter->search . '%');
+    // public static function searchCategory($filter)
+    // {
+    //     $filter = (object) $filter;
+    //     $data = (new self)->model->orderBy($filter->orderBy, $filter->orderDirection)
+    //         ->where('name', 'LIKE', '%' . $filter->search . '%');
 
-        return $data;
-    }
+    //     return $data;
+    // }
 }
