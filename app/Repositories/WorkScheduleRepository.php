@@ -48,6 +48,9 @@ class WorkScheduleRepository extends BaseRepository implements WorkScheduleInter
                     'date' => $filter->time['date'],
                     'interval' => $filter->time['interval']
                 ]);
+            })
+            ->when(isset($filter->id_service), function ($query) use ($filter) {
+                $query->where('id_service', $filter->id_service === 'advise' ? null : $filter->id_service);
             });
         return $data;
     }
