@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\RequestCreateWorkScheduleAdvise;
+use App\Http\Requests\RequestCreateWorkScheduleService;
 use App\Services\WorkScheduleService;
 
 class WorkScheduleController extends Controller
@@ -14,9 +15,15 @@ class WorkScheduleController extends Controller
         $this->workScheduleService = $workScheduleService;
     }
 
-    public function add(RequestCreateWorkScheduleAdvise $request)
+    public function addAdvise(RequestCreateWorkScheduleAdvise $request)
     {
-        return $this->workScheduleService->add($request);
+        return $this->workScheduleService->addAdvise($request);
     }
 
+    public function addService(RequestCreateWorkScheduleService $request)
+    {
+        return $this->workScheduleService->addService($request);
+    }
+
+    
 }

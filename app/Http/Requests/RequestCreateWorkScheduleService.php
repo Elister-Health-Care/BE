@@ -26,8 +26,7 @@ class RequestCreateWorkScheduleService extends FormRequest
     public function rules()
     {
         return [
-            'id_doctor' => 'required|integer',
-            'id_service' => 'required|integer',
+            'id_hospital_service' => 'required|integer',
             'time' => 'required',
         ];
     }

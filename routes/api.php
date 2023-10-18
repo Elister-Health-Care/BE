@@ -211,13 +211,14 @@ Route::prefix('time-work')->controller(TimeWorkController::class)->group(functio
         Route::get('detail', 'detail');
     });
     Route::get('/advise/{id_doctor}', 'advise');
-    Route::get('/service', 'service');
+    Route::get('/service/{id_hospital_service}', 'service');
 });
 
 // WorkSchedule
 Route::prefix('work-schedule')->controller(WorkScheduleController::class)->group(function () {
     Route::middleware(['auth:user_api', 'role:user'])->group(function () {
-        Route::post('add', 'add');
+        Route::post('add-advise', 'addAdvise');
+        Route::post('add-service', 'addService');
         Route::delete('delete/{id}', 'delete');
         Route::get('/', 'all');
     });
