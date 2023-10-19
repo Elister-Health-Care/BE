@@ -179,10 +179,15 @@ class WorkScheduleService
             try {
 
                 $user = UserRepository::findUserById(auth('user_api')->user()->id);
+
                 $doctors = InforDoctorRepository::getInforDoctor(['id_hospital' => $user->id])->get();
                 $idDoctorHospitals = [];
-                foreach ($doctors as $doctor) {
-                    $idDoctorHospitals[] = $doctor->id_doctor;
+
+                if($request->doctors_id) $idDoctorHospitals[] = $request->doctors_id;
+                else {
+                    foreach ($doctors as $doctor) {
+                        $idDoctorHospitals[] = $doctor->id_doctor;
+                    }
                 }
     
                 $search = $request->search;
@@ -214,7 +219,9 @@ class WorkScheduleService
                     'search' => $search,
                     'department_name' => $request->department_name ?? '',
                     'doctors_id' => $idDoctorHospitals,
-                    'is_service' => $request->is_service ?? '', 
+                    'is_service' => $request->is_service ?? '',
+                    'start_date' => $request->start_date ?? '',
+                    'end_date' => $request->end_date ?? '',
                     'orderBy' => $orderBy,
                     'orderDirection' => $orderDirection,
                     'role' => 'hospital',
