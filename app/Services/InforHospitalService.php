@@ -419,13 +419,16 @@ class InforHospitalService
 
             if (!(empty($request->paginate))) {
                 $allDoctor = UserRepository::doctorOfHospital($filter)->paginate($request->paginate);
-
-                return $this->responseOK(200, $allDoctor, 'Xem tất cả bác sĩ thành công !');
             } else {
                 $allDoctor = UserRepository::doctorOfHospital($filter)->get();
-
-                return $this->responseOK(200, $allDoctor, 'Xem tất cả bác sĩ thành công !');
             }
+
+            foreach($allDoctor as $doctor) {
+                $doctor->name_hospital = UserRepository::findUserById($doctor->id_hospital)->name;
+            }
+
+            return $this->responseOK(200, $allDoctor, 'Xem tất cả bác sĩ thành công !');
+
         } catch (Throwable $e) {
             return $this->responseError(400, $e->getMessage());
         }
