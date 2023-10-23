@@ -299,7 +299,7 @@ class TimeWorkService
 
             foreach ($daysOfWeek as $dayOfWeek) {
                 if ($timeWork->times->$dayOfWeek->enable == false) {
-                    $timeWork->times->$dayOfWeek = null;
+                    // $timeWork->times->$dayOfWeek = null;
                 }
             }
 

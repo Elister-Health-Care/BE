@@ -8,6 +8,7 @@ use App\Repositories\DepartmentRepository;
 use App\Repositories\HospitalDepartmentInterface;
 use App\Repositories\HospitalServiceRepository;
 use App\Repositories\InforHospitalRepository;
+use Illuminate\Http\Request;
 use Throwable;
 
 class HospitalDepartmentService
@@ -102,17 +103,39 @@ class HospitalDepartmentService
         }
     }
 
-    public function departmentOfHospital($id)
+    public function departmentOfHospital(Request $request, $id)
     {
         try {
             $hospital = InforHospitalRepository::getInforHospital(['id_hospital' => $id])->first();
             if (empty($hospital)) {
                 return $this->responseError(404, 'Không tìm thấy bệnh viện !');
             }
+
+            $orderBy = 'hospital_departments.id';
+            $orderDirection = 'ASC';
+
+            if ($request->sortlatest == 'true') {
+                $orderBy = 'hospital_departments.id';
+                $orderDirection = 'DESC';
+            }
+
+            if ($request->sortname == 'true') {
+                $orderBy = 'departments.name';
+                $orderDirection = ($request->sortlatest == 'true') ? 'DESC' : 'ASC';
+            }
+
             $filter = (object) [
+                'search' => $request->search ?? '',
                 'id_hospital' => $id,
+                'orderBy' => $orderBy,
+                'orderDirection' => $orderDirection,
             ];
-            $hospitalDepartments = $this->hospitalDepartment->searchHospitalDepartment($filter)->get();
+
+            if (!(empty($request->paginate))) {
+                $hospitalDepartments = $this->hospitalDepartment->searchHospitalDepartment($filter)->paginate($request->paginate);
+            } else {
+                $hospitalDepartments = $this->hospitalDepartment->searchHospitalDepartment($filter)->get();
+            }
 
             return $this->responseOK(200, $hospitalDepartments, 'Xem tất cả khoa của bệnh viện thành công !');
         } catch (Throwable $e) {
