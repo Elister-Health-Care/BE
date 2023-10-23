@@ -9,6 +9,7 @@ use App\Repositories\DepartmentInterface;
 use App\Repositories\DepartmentRepository;
 use App\Repositories\HospitalDepartmentRepository;
 use App\Repositories\InforDoctorRepository;
+use App\Repositories\InforHospitalRepository;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\File;
 use Throwable;
@@ -123,6 +124,18 @@ class DepartmentService
     public function all(Request $request)
     {
         try {
+
+            // hospital 
+            if($request->id_hospital) {
+                $hospital = InforHospitalRepository::getInforHospital(['id_hospital' => $request->id_hospital])->first();
+                if (empty($hospital)) return $this->responseError(404, 'Không tìm thấy bệnh viện !');
+                $hospitalDepartments = HospitalDepartmentRepository::searchHospitalDepartment(['id_hospital' => $request->id_hospital])->get();
+                $id_departments = [];
+                foreach($hospitalDepartments as $hospitalDepartment) {
+                    $id_departments[] = $hospitalDepartment->id_department;
+                }
+            }
+
             $search = $request->search;
             $orderBy = 'id';
             $orderDirection = 'ASC';
@@ -141,6 +154,7 @@ class DepartmentService
                 'search' => $search ?? '',
                 'orderBy' => $orderBy,
                 'orderDirection' => $orderDirection,
+                'id_departments' => $id_departments ?? [0],
             ];
             if (!(empty($request->paginate))) {
                 $departments = $this->departmentRepository->searchDepartment($filter)->paginate($request->paginate);
@@ -159,11 +173,10 @@ class DepartmentService
         try {
             $department = $this->departmentRepository->findById($id);
             if ($department) {
-
-                // search number 
+                // search number
                 $search_number = $department->search_number + 1;
                 $department = DepartmentRepository::updateDepartment($department, ['search_number' => $search_number]);
-                // search number 
+                // search number
 
                 return $this->responseOK(200, $department, 'Xem chi tiết khoa thành công !');
             } else {

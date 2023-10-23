@@ -155,7 +155,7 @@ Route::prefix('department')->controller(DepartmentController::class)->group(func
     Route::middleware('auth:admin_api')->group(function () {
         Route::post('/add', 'add');
         Route::post('update/{id}', 'edit');
-        Route::delete('/{id}', 'delete');
+        Route::delete('delete/{id}', 'delete');
     });
     Route::get('/', 'all');
     Route::get('/detail/{id}', 'details');
@@ -244,4 +244,3 @@ Route::prefix('public')->controller(PublicController::class)->group(function () 
 
 // Seeder Value
 Route::get('province', [ProvinceController::class, 'all']);
-

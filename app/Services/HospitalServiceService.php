@@ -5,7 +5,6 @@ namespace App\Services;
 use App\Http\Requests\RequestCreateHospitalService;
 use App\Http\Requests\RequestUpdateHospitalService;
 use App\Models\WorkSchedule;
-use App\Repositories\DepartmentRepository;
 use App\Repositories\HospitalDepartmentRepository;
 use App\Repositories\HospitalServiceInterface;
 use App\Repositories\UserRepository;
@@ -192,7 +191,6 @@ class HospitalServiceService
     public function all(Request $request)
     {
         try {
-
             $search = $request->search;
             $orderBy = 'id_hospital_service';
             $orderDirection = 'ASC';
@@ -215,16 +213,12 @@ class HospitalServiceService
 
             if (!empty($request->paginate)) {
                 $hospitalServices = $this->hospitalService->searchAll($filter)->paginate($request->paginate);
-            } else { 
+            } else {
                 $hospitalServices = $this->hospitalService->searchAll($filter)->get();
             }
 
             foreach ($hospitalServices as $index => $hospitalService) {
                 $hospitalService->infor = json_decode($hospitalService->infor);
-                $hospitalService->name_hospital = UserRepository::findUserById($hospitalService->id_hospital)->name;
-                $department = DepartmentRepository::findById($hospitalService->id_department);
-                $hospitalService->name_department = $department->name;
-                $hospitalService->thumbnail_department = $department->thumbnail;
             }
 
             return $this->responseOK(200, $hospitalServices, 'Xem tất cả dịch vụ thành công !');
