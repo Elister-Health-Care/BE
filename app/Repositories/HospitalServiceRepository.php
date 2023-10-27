@@ -97,4 +97,9 @@ class HospitalServiceRepository extends BaseRepository implements HospitalServic
 
         return $data;
     }
+
+    public static function getTotalServiceHospital($hospitalDepartmentIds)
+    {
+        return (new self)->model->whereIn('id_hospital_department', $hospitalDepartmentIds)->count();
+    }
 }

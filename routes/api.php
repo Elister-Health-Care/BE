@@ -13,6 +13,7 @@ use App\Http\Controllers\InforHospitalController;
 use App\Http\Controllers\InforUserController;
 use App\Http\Controllers\ProvinceController;
 use App\Http\Controllers\PublicController;
+use App\Http\Controllers\StatisticalController;
 use App\Http\Controllers\TimeWorkController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\WorkScheduleController;
@@ -245,3 +246,13 @@ Route::prefix('public')->controller(PublicController::class)->group(function () 
 
 // Seeder Value
 Route::get('province', [ProvinceController::class, 'all']);
+
+// Statistical
+Route::prefix('statistical')->controller(StatisticalController::class)->group(function () {
+    Route::get('admin', 'statisticalAccount');
+    Route::get('hospital/{id}', 'statisticalHospital');
+    Route::get('doctor/{id}', 'statisticalDoctor');
+    Route::post('admin-by-day', 'statisticalAccountByTime');
+    Route::post('hospital-doctor-by-day', 'statisticalHospitalDoctorByTime');
+    Route::post('hospital-service-by-day', 'statisticalHospitalServiceByTime');
+});
