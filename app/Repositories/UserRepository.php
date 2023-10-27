@@ -168,4 +168,9 @@ class UserRepository extends BaseRepository implements UserInterface
 
         return $data;
     }
+
+    public static function getTotalAccount()
+    {
+        return (new self)->model->count();
+    }
 }

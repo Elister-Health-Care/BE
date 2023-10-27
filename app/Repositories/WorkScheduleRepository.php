@@ -76,7 +76,8 @@ class WorkScheduleRepository extends BaseRepository implements WorkScheduleInter
             work_schedules.id as work_schedule_id , work_schedules.price as work_schedule_price,
             infor_users.date_of_birth as infor_user_date_of_birth
             
-            ')
+            '
+        )
             ->join('infor_doctors', 'infor_doctors.id_doctor', '=', 'work_schedules.id_doctor')
             ->join('hospital_departments', function ($join) { // join với 2 điều kiện
                 $join->on('hospital_departments.id_department', '=', 'infor_doctors.id_department')
@@ -159,5 +160,118 @@ class WorkScheduleRepository extends BaseRepository implements WorkScheduleInter
             });
 
         return $data;
+    }
+
+    public static function getTotalWorkScheduleHospital($doctorIds)
+    {
+        return (new self)->model->whereIn('id_doctor', $doctorIds)->count();
+    }
+
+    public static function getTotalWorkScheduleDoctor($doctorId)
+    {
+        return (new self)->model->where('id_doctor', $doctorId)->count();
+    }
+
+    public static function getTotalWorkScheduleDoctorByDay($doctorId, $day)
+    {
+        $date = date('Y-m-d');
+        if ($day == 7) {
+            $total = (new self)->model::where('id_doctor', $doctorId)
+                ->whereBetween('created_at', [date('Y-m-d', strtotime($date . ' -7 days')),  date('Y-m-d', strtotime($date . ' + 1 days'))])->count();
+        } elseif ($day == 28) {
+            $total = (new self)->model::where('id_doctor', $doctorId)
+                ->whereBetween('created_at', [date('Y-m-d', strtotime($date . ' -28 days')),  date('Y-m-d', strtotime($date . ' + 1 days'))])->count();
+        } elseif ($day == 1) {
+            $total = (new self)->model::where('id_doctor', $doctorId)
+                ->whereBetween('created_at', [date('Y-m-d', strtotime($date)),  date('Y-m-d', strtotime($date . ' + 1 days'))])->count();
+        } else {
+            $total = (new self)->model::where('id_doctor', $doctorId)->count();
+        }
+
+        return $total;
+    }
+
+    public static function getTotalWorkScheduleHospitalDoctor($doctorIds, $startDay, $endDay)
+    {
+        $endDay = (new \Carbon\Carbon($endDay));
+        $endAddDay = clone $endDay;
+        $endAddDay->addDays(1);
+        $result = DB::table('work_schedules')
+            ->select('users.name as doctor_name', DB::raw('COUNT(*) as count'))
+            ->join('users', 'work_schedules.id_doctor', '=', 'users.id')
+            ->whereIn('work_schedules.id_doctor', $doctorIds)
+            ->whereBetween('work_schedules.created_at', [$startDay, $endAddDay])
+            ->groupBy('users.name')
+            ->get();
+
+        return $result;
+    }
+
+    public static function formatWeek($input)
+    {
+        $year = substr($input, 0, 4);
+        $week = substr($input, 4);
+
+        return $year . '-' . $week;
+    }
+
+    public static function getWorkScheduleHospitalService($doctorIds, $startDay, $endDay)
+    {
+        $startDay = is_string($startDay) ? new \DateTime($startDay) : $startDay;
+        $endDay = is_string($endDay) ? new \DateTime($endDay) : $endDay;
+
+        $endDay = (new \Carbon\Carbon($endDay));
+        $endAddDay = clone $endDay;
+        $endAddDay->addDays(1);
+        $timeDifference = $endDay->diffInDays($startDay);
+
+        $checkWeek = 0;
+
+        if ($timeDifference >= 30 && $timeDifference <= 90) {
+            $groupBy = DB::raw('YEARWEEK(work_schedules.created_at, 1)');
+            $dateFormat = 'Y-W';
+            $checkWeek = 1;
+        } elseif ($timeDifference >= 90) {
+            $groupBy = DB::raw('DATE_FORMAT(work_schedules.created_at, "%Y-%m")');
+            $dateFormat = 'Y-m';
+        } else {
+            $groupBy = DB::raw('DATE(work_schedules.created_at)');
+            $dateFormat = 'Y-m-d';
+        }
+        $result = DB::table('work_schedules')
+            ->select($groupBy,
+                DB::raw('SUM(CASE WHEN work_schedules.id_service IS NULL THEN 1 ELSE 0 END) as null_count'),
+                DB::raw('SUM(CASE WHEN work_schedules.id_service IS NOT NULL THEN 1 ELSE 0 END) as not_null_count')
+            )
+            ->join('users', 'work_schedules.id_doctor', '=', 'users.id')
+            ->whereIn('work_schedules.id_doctor', $doctorIds)
+            ->whereBetween('work_schedules.created_at', [$startDay, $endAddDay])
+            ->groupBy($groupBy)
+            ->get();
+        // Tạo một mảng kết quả với count mặc định là 0 cho tất cả ngày
+        $dateList = [];
+        $currentDate = clone $startDay;
+
+        while ($currentDate <= $endDay) {
+            $dateList[] = $currentDate->format($dateFormat);
+            $currentDate->add(new \DateInterval('P1D'));
+        }
+
+        $resultWithMissingDates = [];
+        foreach ($dateList as $date) {
+            $resultWithMissingDates[$date] = [0, 0];
+        }
+        // Cập nhật giá trị count cho các ngày có dữ liệu
+        if ($checkWeek == 1) {
+            foreach ($result as $record) {
+                $resultWithMissingDates[self::formatWeek($record->{$groupBy->getValue()})] = [$record->null_count, $record->not_null_count];
+            }
+        } else {
+            foreach ($result as $record) {
+                $resultWithMissingDates[$record->{$groupBy->getValue()}] = [$record->null_count, $record->not_null_count];
+            }
+        }
+
+        return $resultWithMissingDates;
     }
 }

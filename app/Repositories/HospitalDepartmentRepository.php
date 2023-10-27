@@ -91,4 +91,14 @@ class HospitalDepartmentRepository extends BaseRepository implements HospitalDep
             throw $e;
         }
     }
+
+    public static function getTotalDepartmentHospital($hospitalId)
+    {
+        return (new self)->model->where('id_hospital', $hospitalId)->count();
+    }
+
+    public static function getArrDepartmentHospital($hospitalId)
+    {
+        return (new self)->model->where('id_hospital', $hospitalId)->pluck('id');
+    }
 }

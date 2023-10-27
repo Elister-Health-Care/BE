@@ -2,7 +2,6 @@
 
 namespace App\Repositories;
 
-use App\Models\Example;
 use App\Models\HealthInsurances;
 
 class HealthInsurancesRepository extends BaseRepository implements HealthInsurancesInterface
